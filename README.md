@@ -1,0 +1,149 @@
+# Shop model
+
+Predicts whether an item in the shop will sell, from its price.
+
+## Requirements
+
+Python 3.12 with the venv module. On Ubuntu:
+
+```bash
+sudo apt install python3 python3-venv
+```
+
+## Install
+
+Run these from this folder, the one with pyproject.toml:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install -r requirements.txt
+python3 -m pip install -e ".[dev]"
+cp env.example .env
+```
+
+## Test
+
+```bash
+pytest
+```
+
+## Train
+
+```bash
+shop-train
+```
+
+The model is saved to models/model.joblib. Shared settings are in
+config/config.yaml; settings for your machine go in .env.
+
+
+## Monitoring
+
+The monitoring services (Prometheus and Grafana) are in the monitoring
+folder and start together with the API and the database:
+
+```bash
+docker compose up -d --build
+docker compose ps
+```
+
+Four containers should be running: api, db, prometheus and grafana.
+
+- Dashboard (Grafana): http://localhost:3000, opens on the Model service
+  dashboard, no login needed
+- Prometheus: http://localhost:9090 (Status, then Target health, should
+  show model-api as UP)
+- The API's own metrics: http://localhost:8888/metrics
+
+In a VirtualBox VM, ports 3000 and 9090 need port-forwarding rules, as
+for 8888.
+
+## Generating traffic
+
+With the virtual environment active, from this folder:
+
+```bash
+python3 monitoring/traffic.py --field price --mean 23 --sd 12 --duration 300
+```
+
+To simulate drift (prices rising), run it again with a higher mean:
+
+```bash
+python3 monitoring/traffic.py --field price --mean 35 --sd 12 --duration 300
+```
+
+Stop it early with Ctrl+C. `python3 monitoring/traffic.py --help` lists
+all options.
+
+## Stopping
+
+```bash
+docker compose down
+```
+
+This keeps the stored predictions and metrics, which live in volumes.
+`docker compose down -v` deletes them as well.
+
+## The pipeline (Session 5, Stage 12)
+
+Every check runs with one command, in order, stopping at the first failure:
+
+```
+make install    # pinned requirements, then the package with its dev tools
+cp env.example .env
+make ci         # lint, test, validate, gate, build
+```
+
+| Target | What it does | Fails when |
+|---|---|---|
+| `make lint` | ruff checks the code | a style or correctness rule is broken |
+| `make test` | pytest, including the property-based range test | any test fails |
+| `make validate` | checks `data/prices_v2.csv` and `data/holdout.csv` against the schema | a row is invalid or a column is unexpected |
+| `make gate` | trains on rows before the holdout and scores the frozen holdout | exit 1: below the threshold; exit 2: the holdout changed |
+| `make build` | builds `shop-model:<version>` and `shop-model:<version>-<commit>`, the version read from `pyproject.toml` | the image does not build |
+
+Compare the gate with the random split of Stage 7: `make gate GATE_SPLIT=random`.
+
+The gate's metric and threshold live in `config/config.yaml` (`gate_metric`, `gate_threshold`), next to the holdout's start date and SHA-256 fingerprint. Never edit `data/holdout.csv`: the gate refuses to run if its fingerprint changes.
+
+Start the whole stack with the version from `pyproject.toml`: `make up`.
+
+## Continuous integration (Session 5, Stage 13)
+
+`.github/workflows/ci.yml` runs `make ci` on every push and pull request. On a push to `main`, once every check has passed, the same run publishes the image it just built to GitHub's container registry, as `ghcr.io/<owner>/shop-model:<version>` and `:<version>-<commit>`.
+
+- Require the `ci` check before merging (repository settings, branch protection), so a failing gate blocks the merge.
+- The version lives only in `pyproject.toml`. To release, change it there; the image tag and `MODEL_VERSION` follow.
+- No GitHub Actions? Run the same workflow locally with `act -j ci` and keep its log.
+- GitLab users: `.gitlab-ci.yml` runs the same `make` targets.
+
+## Tracking and the registry (Session 6, Stage 14)
+
+MLflow runs as one more service, on port 5000, with its records in Postgres and its files in the `mlflow-artifacts` volume.
+
+```
+docker compose up -d db mlflow     # add --profile monitoring for Prometheus and Grafana
+make train                         # train, score the frozen holdout, record the run
+make register                      # train, then register that run: only if it passed the gate, from committed code
+shop-registry alias champion 2     # point the champion alias at version 2
+shop-registry show                 # versions, gate metric and aliases
+```
+
+Each run records the seed, VAT rate, training window, every holdout metric, the git commit, and the SHA-256 of the data and the holdout. `MLFLOW_TRACKING_URI` in `.env` says where runs go.
+
+On an existing database volume, create MLflow's database once: `docker compose exec db createdb -U shop mlflow`.
+
+## Serving from the registry (Session 6, Stage 15)
+
+The image holds code only. At start-up the API loads `models:/shop_model@champion` and records which version it serves.
+
+- `/health`: the process is alive.
+- `/ready`: a model is loaded; answers 503 until then, with `model_version` once ready.
+- Each stored prediction records the model version, for example `shop_model/2`.
+
+Roll back by moving the alias and restarting the API: `make champion V=1`. No rebuild.
+
+To work without the registry on your own machine, outside compose, set `MODEL_URI=models/model.joblib` (written by `shop-train`) and run uvicorn directly. The image holds no model file, so inside compose the API always needs the registry.
+
+The model card is in `docs/model_card.md`; attach it to a version with `shop-registry card 2 docs/model_card.md`.
