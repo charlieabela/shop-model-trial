@@ -12,7 +12,7 @@ SOURCE ?=
 LABELS := $(if $(SOURCE),--label org.opencontainers.image.source=$(SOURCE))
 GATE_SPLIT ?= holdout
 
-.PHONY: install lint test validate gate build publish up version ci train register champion
+.PHONY: install lint test validate gate build publish up version ci train register champion ask profile sales kg-version kg-release
 
 install:
 	python3 -m pip install -r requirements.txt
@@ -52,6 +52,34 @@ register: train
 champion:
 	shop-registry alias champion $(V)
 	docker compose restart api
+
+# Session 7: the staff questions, answered through the listings alone and through the shop's knowledge.
+# ROUTE=keyword or ROUTE=knowledge runs one route; SHOW=--show lists what each route got wrong or missed.
+ROUTE ?= both
+SHOW ?=
+ask:
+	shop-ask questions --route $(ROUTE) $(SHOW)
+
+profile:
+	shop-ask profile
+
+# Session 7: sales and sell-through rate by department, material or range, from the knowledge layer.
+BY ?= department
+sales:
+	shop-ask sales --by $(BY)
+
+# Session 7: the knowledge has a version of its own, kept in one place, kg/schema.yaml, and separate from the code's.
+# A release of the knowledge is an annotated git tag on a commit whose tests pass, and a tag is never reused:
+# git refuses to create one that exists. Push it with: git push origin kg-v$(KG_VERSION)
+KG_VERSION := $(shell sed -n 's/^version: "\(.*\)"$$/\1/p' kg/schema.yaml)
+kg-version:
+	@echo $(KG_VERSION)
+
+kg-release: test
+	@git diff --quiet HEAD || \
+		{ echo "Commit your changes before releasing the knowledge."; exit 1; }
+	git tag -a kg-v$(KG_VERSION) -m "Shop knowledge $(KG_VERSION)"
+	@echo "Push the tag with: git push origin kg-v$(KG_VERSION)"
 
 version:
 	@echo $(VERSION)

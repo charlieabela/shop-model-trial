@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "shop_model"
-version = "0.6.0"
+version = "0.7.0"
 requires-python = ">=3.11"
 dependencies = [
 	"pandas>=2.0",
@@ -34,8 +34,7 @@ shop-train = "shop_model.train:main"
 shop-validate = "shop_model.validate:main"
 shop-gate = "shop_model.evaluate:main"
 shop-registry = "shop_model.registry:main"
-
-
+shop-ask = "shop_model.ask:main"
 
 [tool.ruff]
 line-length = 120
