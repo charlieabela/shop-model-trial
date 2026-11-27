@@ -5,7 +5,7 @@
 #
 # min and max are cardinalities: how many of the relationship each instance of the first class must have.
 # max: null means no upper limit.
-version: "1.0"
+version: "1.1"
 owner: the shop's owner
 
 classes:

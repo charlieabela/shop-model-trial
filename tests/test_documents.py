@@ -33,3 +33,18 @@ def test_documents_for_the_stainless_pan():
 def test_a_product_with_no_document_of_its_own_still_gets_the_policies_of_its_range():
     docs = documents_for("cast-iron-casserole", load_knowledge())
     assert docs == {"returns-premium", "warranty"}
+
+
+def test_the_graph_finds_the_same_documents_as_the_files():
+    from rdflib import Graph
+
+    from shop_model.config import load_config
+    from shop_model.graph import add_knowledge
+    from shop_model.graph import documents_for as documents_in_graph
+    from shop_model.knowledge import link_listings, load_listings
+
+    kg = load_knowledge()
+    listings = link_listings(load_listings(load_config()), kg.products)
+    g = add_knowledge(Graph(), kg, listings)
+    for product_id in kg.products["product_id"]:
+        assert documents_in_graph(g, product_id) == documents_for(product_id, kg), product_id
