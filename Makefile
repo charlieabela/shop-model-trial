@@ -13,7 +13,7 @@ LABELS := $(if $(SOURCE),--label org.opencontainers.image.source=$(SOURCE))
 GATE_SPLIT ?= holdout
 
 .PHONY: install lint test validate gate build publish up version ci train register champion ask profile sales kg-version kg-release \
-	kg-load kg-count kg-ask kg-clean kg-check
+	kg-load kg-count kg-ask kg-clean kg-check kg-docs
 
 install:
 	python3 -m pip install -r requirements.txt
@@ -98,6 +98,11 @@ kg-ask:
 
 kg-clean:
 	rm -f kg/build/shop.nt
+
+# The documents in corpus/ that apply to one product, found in the store: make kg-docs PRODUCT=copper-saute-pan-24
+PRODUCT ?= copper-saute-pan-24
+kg-docs:
+	shop-kg documents --product $(PRODUCT)
 
 # What make ci checks: the store built from nothing, loaded a second time without change, and the questions
 # answered from the store as written. It leaves that store in kg/build/shop.nt, the artefact that was checked.

@@ -10,6 +10,7 @@ The files of Shop knowledge v1.0 hold what the listings alone cannot say:
     kg/complements.yaml        which categories go with which: rules from which pairs of products are derived
     kg/synonyms.yaml           the words staff use, each mapped to a concept, a range or a material
     kg/questions.yaml          the competency questions, with the answers the shop expects
+    kg/documents.csv           which document in corpus/ is about which product or concept
 
 Stage 17 loads the same files into Neo4j; this module answers from them directly.
 """
@@ -32,6 +33,7 @@ TAXONOMY_PATH = "kg/taxonomy.yaml"
 MATERIALS_PATH = "kg/materials.yaml"
 SYNONYMS_PATH = "kg/synonyms.yaml"
 QUESTIONS_PATH = "kg/questions.yaml"
+DOCUMENTS_PATH = "kg/documents.csv"
 
 
 @dataclass
@@ -45,6 +47,7 @@ class Knowledge:
     materials: dict
     complements: list
     synonyms: dict
+    documents: pd.DataFrame
 
 
 def load_listings(config):
@@ -98,6 +101,11 @@ def load_synonyms(path=SYNONYMS_PATH):
         return yaml.safe_load(f)["terms"]
 
 
+def load_documents(path=DOCUMENTS_PATH):
+    """One row per link: a document in corpus/, its type, and the product or concept it is about."""
+    return pd.read_csv(path, dtype=str)
+
+
 def load_questions(path=QUESTIONS_PATH):
     with open(path) as f:
         return yaml.safe_load(f)["questions"]
@@ -107,7 +115,7 @@ def load_knowledge():
     concepts, ranges = load_taxonomy()
     return Knowledge(products=load_products(), product_categories=load_product_categories(),
                      gift_sets=load_gift_sets(), concepts=concepts, ranges=ranges, materials=load_materials(),
-                     complements=load_complements(), synonyms=load_synonyms())
+                     complements=load_complements(), synonyms=load_synonyms(), documents=load_documents())
 
 
 def narrower(hierarchy, broad_id):
@@ -158,6 +166,34 @@ def complement_pairs(kg):
     return pairs
 
 
+def broader(hierarchy, item_id):
+    """The concept and every concept it is a kind of, up to the top. Works for either hierarchy."""
+    found = [item_id]
+    while hierarchy.get(found[-1], {}).get("is_a"):
+        found.append(hierarchy[found[-1]]["is_a"])
+    return set(found)
+
+
+def documents_for(product_id, kg):
+    """The documents that apply to a product: those about the product itself, its range, its categories and
+    their broader concepts, and its material and its broader materials. A gift set also receives the documents
+    that apply to each product it contains, except those about the range of that product: the set is sold,
+    delivered and returned under its own range."""
+    products = kg.products.set_index("product_id")
+    gs = kg.gift_sets
+    members = [product_id] + list(gs.loc[gs["gift_set_id"] == product_id, "product_id"])
+    subjects = {products.loc[product_id, "range"]}
+    pc = kg.product_categories
+    for member in members:
+        subjects.add(member)
+        for category in pc.loc[pc["product_id"] == member, "category"]:
+            subjects |= broader(kg.concepts, category)
+        if products.loc[member, "material"]:
+            subjects |= broader(kg.materials, products.loc[member, "material"])
+    docs = kg.documents
+    return set(docs.loc[docs["about"].isin(subjects), "doc_id"])
+
+
 def gift_sets_containing(concept_id, kg):
     """The gift sets that contain at least one product the concept covers."""
     covered = products_for(concept_id, kg)
@@ -176,6 +212,7 @@ def instances(kg):
         "Product": set(products["product_id"]),
         "GiftSet": set(products.loc[products["class"] == "GiftSet", "product_id"]),
         "Term": set(kg.synonyms),
+        "Document": set(kg.documents["doc_id"]),
     }
 
 
@@ -190,6 +227,7 @@ def relationships(kg):
     rels += [("CONTAINS", r.gift_set_id, r.product_id) for r in kg.gift_sets.itertuples()]
     rels += [("GOES_WITH", *rule["categories"]) for rule in kg.complements]
     rels += [("MEANS", t, c) for t, c in kg.synonyms.items()]
+    rels += [("ABOUT", r.doc_id, r.about) for r in kg.documents.itertuples()]
     return rels
 
 

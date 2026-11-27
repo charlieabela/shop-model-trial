@@ -64,6 +64,21 @@ def range_iri(range_id):
     return SHOP[f"range/{range_id}"]
 
 
+def document_iri(doc_id):
+    return SHOP[f"document/{doc_id}"]
+
+
+def subject_iri(key, kg):
+    """The IRI of whatever a document is about: a product, a range, a material or a concept of the taxonomy."""
+    if key in set(kg.products["product_id"]):
+        return product_iri(key)
+    if key in kg.ranges:
+        return range_iri(key)
+    if key in kg.materials:
+        return material_iri(key)
+    return concept_iri(key)
+
+
 def listing_id(row):
     """A listing is one product, put on sale on one day, at one price. The same product is sometimes listed twice
     on the same day, so the date and the product alone are not enough."""
@@ -142,6 +157,14 @@ def add_knowledge(g, kg, listings, version=None):
     for rule in kg.complements:
         first, second = rule["categories"]
         g.add((concept_iri(first), SHOP.goesWith, concept_iri(second)))
+    # The documents in corpus/: the graph holds each document's identifier, its type and what it is about. The text
+    # stays in the Markdown files and in the retrieval index.
+    for d in kg.documents.itertuples():
+        node = document_iri(d.doc_id)
+        g.add((node, RDF.type, SHOP.Document))
+        g.add((node, SHOP.docId, Literal(d.doc_id)))
+        g.add((node, SHOP.docType, Literal(d.type)))
+        g.add((node, SHOP.about, subject_iri(d.about, kg)))
     for row in listings.to_dict("records"):
         node = listing_iri(row)
         g.add((node, RDF.type, SHOP.Listing))
@@ -264,6 +287,31 @@ ORDER BY ?id
 """
 
 
+# The documents that apply to a product: those about the product itself, its range, its categories and their
+# broader concepts, and its material and its broader materials. The path shop:contains? matches the product
+# itself and, for a gift set, each product it contains; the range is that of the product asked about.
+# ?id is bound by the caller (initBindings), never written into the text of the query, because in Session 9 it
+# comes from a customer's question.
+DOCUMENTS_FOR = PREFIXES + """
+SELECT DISTINCT ?docId WHERE {
+  ?asked shop:productId ?id .
+  ?asked shop:contains? ?product .
+  { ?document shop:about ?product }
+  UNION { ?asked shop:inRange ?subject . ?document shop:about ?subject }
+  UNION { ?product shop:inCategory/skos:broader* ?subject . ?document shop:about ?subject }
+  UNION { ?product shop:madeOf/skos:broader* ?subject . ?document shop:about ?subject }
+  ?document a shop:Document ; shop:docId ?docId .
+}
+ORDER BY ?docId
+"""
+
+
+def documents_for(g, product_id):
+    """The identifiers of the documents that apply to a product, found in the graph."""
+    rows = g.query(DOCUMENTS_FOR, initBindings={"id": Literal(product_id)})
+    return {str(row.docId) for row in rows}
+
+
 def terms_of(question):
     return " ".join(Literal(t, lang="en").n3() for t in question["terms"])
 
@@ -327,7 +375,8 @@ def check(config):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="The shop's knowledge layer as an RDF graph.")
-    parser.add_argument("command", choices=["load", "count", "ask", "check"])
+    parser.add_argument("command", choices=["load", "count", "ask", "check", "documents"])
+    parser.add_argument("--product", help="a product_id from kg/products.csv, for the documents command")
     args = parser.parse_args(argv)
     setup_logging(os.environ.get("LOG_LEVEL", "WARNING"))
     config = load_config()
@@ -342,6 +391,10 @@ def main(argv=None):
     g = open_store()
     if args.command == "count":
         count(g)
+        return 0
+    if args.command == "documents":
+        for doc_id in sorted(documents_for(g, args.product)):
+            print(doc_id)
         return 0
     return ask(g)
 
