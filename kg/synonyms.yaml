@@ -27,5 +27,7 @@ terms:
   premium: premium
   premium range: premium
   luxury: premium
+  standard: core
+  standard range: core
   gift set: gift-sets
   gift sets: gift-sets

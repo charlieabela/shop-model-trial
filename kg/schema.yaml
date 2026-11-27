@@ -16,11 +16,13 @@ classes:
   Product:    {key: product_id, file: kg/products.csv, description: a thing the shop sells, listed or not yet listed}
   GiftSet:    {key: product_id, file: kg/products.csv, is_a: Product, description: a product made of other products}
   Term:       {key: text, file: kg/synonyms.yaml, description: a word staff use}
+  Document:   {key: doc_id, file: kg/documents.csv, description: a document in corpus/ that says something about a product or a concept}
   Listing:    {key: [listed_at, product_id, price], file: data/, description: one product on sale on one day at one price}
 
 properties:
   - {class: Product, name: name, type: string, required: true}
   - {class: Range, name: launched, type: date, required: false}
+  - {class: Document, name: type, type: string, required: true}
   - {class: Listing, name: listed_at, type: date, required: true}
   - {class: Listing, name: price, type: decimal, required: true}
   - {class: Listing, name: sold, type: boolean, required: true}
@@ -33,5 +35,6 @@ relationships:
   - {name: BROADER, from: Material, to: [Material], min: 0, max: 1}
   - {name: CONTAINS, from: GiftSet, to: [Product], min: 2, max: null}
   - {name: GOES_WITH, from: Category, to: [Category], min: 0, max: null, symmetric: true}
+  - {name: ABOUT, from: Document, to: [Product, Category, Department, Range, Material], min: 1, max: null}
   - {name: MEANS, from: Term, to: [Department, Category, Range, Material], min: 1, max: 1}
   - {name: OF, from: Listing, to: [Product], min: 1, max: 1}

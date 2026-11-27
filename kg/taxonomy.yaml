@@ -13,6 +13,7 @@ concepts:
   - {id: cookware, name: Cookware, is_a: kitchen-dining}
   - {id: bakeware, name: Bakeware, is_a: cookware}
   - {id: pots-casseroles, name: Pots and casseroles, is_a: cookware}
+  - {id: saute-pans, name: Sauté pans, is_a: cookware}
   - {id: tableware, name: Tableware, is_a: kitchen-dining}
   - {id: dinnerware, name: Dinnerware, is_a: tableware}
   - {id: drinkware, name: Drinkware, is_a: tableware}
