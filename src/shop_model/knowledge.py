@@ -176,14 +176,20 @@ def broader(hierarchy, item_id):
 
 def documents_for(product_id, kg):
     """The documents that apply to a product: those about the product itself, its range, its categories and
-    their broader concepts, and its material and its broader materials."""
-    product = kg.products.set_index("product_id").loc[product_id]
-    subjects = {product_id, product["range"]}
+    their broader concepts, and its material and its broader materials. A gift set also receives the documents
+    that apply to each product it contains, except those about the range of that product: the set is sold,
+    delivered and returned under its own range."""
+    products = kg.products.set_index("product_id")
+    gs = kg.gift_sets
+    members = [product_id] + list(gs.loc[gs["gift_set_id"] == product_id, "product_id"])
+    subjects = {products.loc[product_id, "range"]}
     pc = kg.product_categories
-    for category in pc.loc[pc["product_id"] == product_id, "category"]:
-        subjects |= broader(kg.concepts, category)
-    if product["material"]:
-        subjects |= broader(kg.materials, product["material"])
+    for member in members:
+        subjects.add(member)
+        for category in pc.loc[pc["product_id"] == member, "category"]:
+            subjects |= broader(kg.concepts, category)
+        if products.loc[member, "material"]:
+            subjects |= broader(kg.materials, products.loc[member, "material"])
     docs = kg.documents
     return set(docs.loc[docs["about"].isin(subjects), "doc_id"])
 

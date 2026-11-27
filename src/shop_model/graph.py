@@ -288,13 +288,16 @@ ORDER BY ?id
 
 
 # The documents that apply to a product: those about the product itself, its range, its categories and their
-# broader concepts, and its material and its broader materials. ?id is bound by the caller (initBindings), never
-# written into the text of the query, because in Session 9 it comes from a customer's question.
+# broader concepts, and its material and its broader materials. The path shop:contains? matches the product
+# itself and, for a gift set, each product it contains; the range is that of the product asked about.
+# ?id is bound by the caller (initBindings), never written into the text of the query, because in Session 9 it
+# comes from a customer's question.
 DOCUMENTS_FOR = PREFIXES + """
 SELECT DISTINCT ?docId WHERE {
-  ?product shop:productId ?id .
+  ?asked shop:productId ?id .
+  ?asked shop:contains? ?product .
   { ?document shop:about ?product }
-  UNION { ?product shop:inRange ?subject . ?document shop:about ?subject }
+  UNION { ?asked shop:inRange ?subject . ?document shop:about ?subject }
   UNION { ?product shop:inCategory/skos:broader* ?subject . ?document shop:about ?subject }
   UNION { ?product shop:madeOf/skos:broader* ?subject . ?document shop:about ?subject }
   ?document a shop:Document ; shop:docId ?docId .

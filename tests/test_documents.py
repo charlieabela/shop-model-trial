@@ -30,9 +30,43 @@ def test_documents_for_the_stainless_pan():
     assert "returns-premium" not in docs
 
 
-def test_a_product_with_no_document_of_its_own_still_gets_the_policies_of_its_range():
-    docs = documents_for("cast-iron-casserole", load_knowledge())
-    assert docs == {"returns-premium", "warranty"}
+def test_a_document_about_a_material_reaches_products_of_a_narrower_material():
+    kg = load_knowledge()
+    assert "care-wood" in documents_for("olive-wood-salad-servers", kg)
+    assert "care-wood" in documents_for("oak-bookends", kg)
+
+
+def test_bamboo_is_not_wood_for_the_care_notes_either():
+    docs = documents_for("bamboo-coaster-set", load_knowledge())
+    assert "care-plant-fibre" in docs
+    assert "care-wood" not in docs
+
+
+def test_a_finer_wool_receives_both_care_notes():
+    docs = documents_for("cashmere-throw-charcoal", load_knowledge())
+    assert {"care-cashmere", "care-wool", "guide-throws", "returns-premium"} <= docs
+    assert "care-cashmere" not in documents_for("wool-throw-blanket-grey", load_knowledge())
+
+
+def test_a_document_about_a_department_reaches_products_two_levels_down():
+    assert "guide-garden" in documents_for("copper-watering-can", load_knowledge())
+
+
+def test_a_gift_set_receives_the_documents_of_its_contents_and_the_policies_of_its_own_range():
+    docs = documents_for("gift-set-serving", load_knowledge())
+    assert {"care-wood", "guide-serveware", "policy-gift-sets", "returns-premium"} <= docs
+    assert "returns-standard" not in docs   # the olive wood servers are core range, the set is premium
+
+
+def test_no_document_names_a_product_it_is_not_directly_about():
+    kg = load_knowledge()
+    direct = set(kg.products["product_id"])
+    for doc_id, about in kg.documents[["doc_id", "about"]].itertuples(index=False):
+        if about in direct:
+            continue
+        text = (CORPUS / f"{doc_id}.md").read_text(encoding="utf-8").lower()
+        for name in kg.products["name"]:
+            assert name.lower() not in text, (doc_id, name)
 
 
 def test_the_graph_finds_the_same_documents_as_the_files():
