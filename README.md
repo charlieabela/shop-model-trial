@@ -147,3 +147,68 @@ Roll back by moving the alias and restarting the API: `make champion V=1`. No re
 To work without the registry on your own machine, outside compose, set `MODEL_URI=models/model.joblib` (written by `shop-train`) and run uvicorn directly. The image holds no model file, so inside compose the API always needs the registry.
 
 The model card is in `docs/model_card.md`; attach it to a version with `shop-registry card 2 docs/model_card.md`.
+
+## The shop's knowledge (Session 7)
+
+The listings say what was listed, at what price, and whether it sold. What a product is (its categories, its
+material, its range, the words staff use for it) lives in kg/, as release v1.0 of the shop's knowledge, the
+Christmas 2026 catalogue. The catalogue also holds products that have not been listed yet.
+
+| File | What it holds |
+|---|---|
+| kg/schema.yaml | the classes, properties and relationships, with cardinalities; every file conforms to it |
+| kg/products.csv | one row per product, listed or not yet: identifier, class (Product or GiftSet), name, material, range |
+| kg/product_categories.csv | which category each product is in; a product can be in more than one |
+| kg/gift_sets.csv | which products each gift set contains |
+| kg/taxonomy.yaml | departments, categories and subcategories, each a kind of its broader concept |
+| kg/materials.yaml | materials, each a kind of its broader material (oak is a wood) |
+| kg/complements.yaml | rules saying which categories go with which; pairs of products are derived from them |
+| kg/synonyms.yaml | the words staff use, each mapped to a concept, a range or a material |
+| kg/questions.yaml | the competency questions, with the answers the shop expects |
+
+```bash
+make profile                 # listings against products, and the catalogue
+make ask                     # every question, through both routes, scored
+make ask ROUTE=keyword SHOW=--show
+make sales BY=department     # listings, sales and sell-through rate by department, material or range
+```
+
+The decision to add this layer is recorded in docs/adr/0001-knowledge-layer.md.
+
+### Releasing the knowledge
+
+The knowledge has its own version, in `kg/schema.yaml`, separate from the code's version in `pyproject.toml`.
+A change to kg/ goes through a pull request like any change to the code: the `ci` check runs the schema and
+the competency questions, and the branch rule from Session 5 blocks a merge that fails them.
+
+```bash
+make kg-version              # the version of the knowledge, from kg/schema.yaml
+make kg-release              # run the tests, then tag the commit kg-v<version>; refuses uncommitted changes
+git push origin kg-v1.0      # publish the tag
+```
+
+A tag is never reused. To release a change, raise the version in `kg/schema.yaml` (1.1 for added or corrected
+knowledge, 2.0 for a change to the schema that existing files or queries depend on), commit, and release again.
+
+## The knowledge graph (Session 7, Stage 17)
+
+The same knowledge as an RDF graph, built with rdflib into a store of N-Triples, kg/build/shop.nt. The store is
+derived from kg/ and the listings, so it is not committed; rebuild it at any time.
+
+```bash
+make kg-load      # add the knowledge files and the listings to the store; safe to run again
+make kg-count     # triples, instances of each class, uses of each property, and the store's SHA-256
+make kg-ask       # the staff questions in SPARQL, including the cross-sell and gift-set questions, scored
+                  # against kg/questions.yaml
+make kg-clean     # empty the store, for a rebuild from the files
+```
+
+`make ci` now runs `make kg-check`: it builds the store from nothing, loads it a second time and requires the same
+SHA-256, then answers every question from the store as written and fails on any wrong answer. From this stage
+`make kg-release` runs the same check and records the store's SHA-256 in the tag's message (`git tag -n kg-v1.0`),
+so a rollback can be confirmed: check out the files of an earlier release, run `make kg-check`, and compare.
+
+```bash
+git checkout kg-v1.0 -- kg/   # the knowledge files of release 1.0, on your current branch
+make kg-check                 # the SHA-256 printed must match the one in the tag's message
+```

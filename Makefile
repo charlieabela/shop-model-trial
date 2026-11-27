@@ -12,7 +12,8 @@ SOURCE ?=
 LABELS := $(if $(SOURCE),--label org.opencontainers.image.source=$(SOURCE))
 GATE_SPLIT ?= holdout
 
-.PHONY: install lint test validate gate build publish up version ci train register champion ask profile sales kg-version kg-release
+.PHONY: install lint test validate gate build publish up version ci train register champion ask profile sales kg-version kg-release \
+	kg-load kg-count kg-ask kg-clean kg-check
 
 install:
 	python3 -m pip install -r requirements.txt
@@ -75,14 +76,36 @@ KG_VERSION := $(shell sed -n 's/^version: "\(.*\)"$$/\1/p' kg/schema.yaml)
 kg-version:
 	@echo $(KG_VERSION)
 
-kg-release: test
+# From Stage 17 the release is checked as a graph too, and the tag records the fingerprint of the store it gives.
+STORE_SHA = $$(sha256sum kg/build/shop.nt | cut -c1-16)
+kg-release: test kg-check
 	@git diff --quiet HEAD || \
 		{ echo "Commit your changes before releasing the knowledge."; exit 1; }
-	git tag -a kg-v$(KG_VERSION) -m "Shop knowledge $(KG_VERSION)"
+	git tag -a kg-v$(KG_VERSION) \
+		-m "Shop knowledge $(KG_VERSION); store sha256 $(STORE_SHA)"
 	@echo "Push the tag with: git push origin kg-v$(KG_VERSION)"
+
+# Session 7, Stage 17: the knowledge layer as an RDF graph, in the store kg/build/shop.nt.
+# kg-load is safe to run again; kg-clean empties the store, for a rebuild from the files.
+kg-load:
+	shop-kg load
+
+kg-count:
+	shop-kg count
+
+kg-ask:
+	shop-kg ask
+
+kg-clean:
+	rm -f kg/build/shop.nt
+
+# What make ci checks: the store built from nothing, loaded a second time without change, and the questions
+# answered from the store as written. It leaves that store in kg/build/shop.nt, the artefact that was checked.
+kg-check:
+	shop-kg check
 
 version:
 	@echo $(VERSION)
 
 # The whole pipeline, in order. make stops at the first command that exits non-zero.
-ci: lint test validate gate build
+ci: lint test validate gate kg-check build
