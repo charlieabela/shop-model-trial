@@ -13,7 +13,7 @@ LABELS := $(if $(SOURCE),--label org.opencontainers.image.source=$(SOURCE))
 GATE_SPLIT ?= holdout
 
 .PHONY: install lint test validate gate build publish up version ci train register champion ask profile sales kg-version kg-release \
-	kg-load kg-count kg-ask kg-clean kg-check
+	kg-load kg-count kg-ask kg-clean kg-check kg-try kg-infer kg-validate
 
 install:
 	python3 -m pip install -r requirements.txt
@@ -110,15 +110,15 @@ BATCH ?=
 
 # What Stage 17 can say about a batch: make kg-try BATCH=incoming/harbour-cookware.csv
 kg-try:
-	shop-kg try --batch $(BATCH)
+	shop-intake try --batch $(BATCH)
 
 # What a reasoner adds, given kg/ontology.ttl.
 kg-infer:
-	shop-kg infer $(if $(BATCH),--batch $(BATCH))
+	shop-intake infer $(if $(BATCH),--batch $(BATCH))
 
 # Every resource checked against kg/shapes.ttl. make ci runs it on kg/, with no batch.
 kg-validate:
-	shop-kg validate $(if $(BATCH),--batch $(BATCH))
+	shop-intake validate $(if $(BATCH),--batch $(BATCH))
 
 version:
 	@echo $(VERSION)

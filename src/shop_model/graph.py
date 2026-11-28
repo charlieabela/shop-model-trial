@@ -1,17 +1,10 @@
-"""The shop's knowledge layer as an RDF graph (Session 7, Stage 17; Session 8, Stage 18).
+"""The shop's knowledge layer as an RDF graph (Session 7, Stage 17).
 
     shop-kg load    add the knowledge files and the listings to the graph store, kg/build/shop.nt
     shop-kg count   triples in the store, instances of each class, uses of each property, and the store's SHA-256
     shop-kg ask     answer the staff questions in SPARQL and score them, as shop-ask does
     shop-kg check   what make ci runs: build the store from nothing, load it again, require the same SHA-256, and
                     answer every question from the store as written
-
-Session 8, Stage 18. None of these three changes the store or the files in kg/. With --batch FILE each one works
-on the knowledge with a supplier's batch added to it in memory.
-
-    shop-kg try       answer the staff questions with a batch added (--batch is required)
-    shop-kg infer     what a reasoner adds, given the ontology in kg/ontology.ttl
-    shop-kg validate  check every resource against the shapes in kg/shapes.ttl
 
 The store is a file of N-Triples, one triple per line, written in sorted order: the same content always gives
 the same file, and so the same SHA-256. Loading adds to what the store already holds, as loading into any triple
@@ -34,22 +27,17 @@ from shop_model.ask import fmt, score
 from shop_model.config import load_config
 from shop_model.knowledge import (
     QUESTIONS_PATH,
-    check_against_schema,
     link_listings,
-    load_batch,
     load_knowledge,
     load_listings,
     load_questions,
     load_schema,
-    with_batch,
 )
 from shop_model.logging_setup import setup_logging
 
 logger = logging.getLogger(__name__)
 
 STORE_PATH = Path("kg/build/shop.nt")
-ONTOLOGY_PATH = Path("kg/ontology.ttl")
-SHAPES_PATH = Path("kg/shapes.ttl")
 
 # Every IRI the shop mints starts here. example.org is reserved for examples, so it can never clash with a real site.
 SHOP = Namespace("https://ari3217.example.org/shop/")
@@ -337,100 +325,9 @@ def check(config):
     return ask(open_store())
 
 
-def build(config, batch_path=None):
-    """The knowledge graph built in memory from the files in kg/ and the listings, with a batch added if one is
-    given. Nothing is written: the store and the files in kg/ stay as they are."""
-    kg = load_knowledge()
-    if batch_path:
-        kg = with_batch(kg, load_batch(batch_path))
-    listings = link_listings(load_listings(config), kg.products)
-    g = Graph()
-    add_knowledge(g, kg, listings)
-    return g, kg
-
-
-def try_batch(config, batch_path):
-    """What Stage 17 can say about a batch: whether the knowledge still conforms to kg/schema.yaml, and whether
-    the answers to the staff questions are still the expected ones."""
-    g, kg = build(config, batch_path)
-    batch = load_batch(batch_path)
-    violations = check_against_schema(kg)
-    print(f"batch {batch_path}: {len(batch)} products added in memory; the graph has {len(g)} triples")
-    print(f"kg/schema.yaml: {len(violations)} violations")
-    for violation in violations:
-        print(f"  {violation}")
-    return ask(g)
-
-
-def short(term):
-    """A term as staff would read it: the last part of an IRI, or the text of a literal."""
-    text = str(term)
-    for prefix in (str(SHOP), str(SKOS), str(RDF), str(RDFS), str(OWL)):
-        if text.startswith(prefix):
-            return text[len(prefix):]
-    return text
-
-
-def infer(config, batch_path=None):
-    """What a reasoner adds to the knowledge graph, given the ontology. The reasoner applies the OWL 2 RL rules,
-    which include those of RDFS. Only statements about the shop's own resources are counted."""
-    from owlrl import DeductiveClosure, OWLRL_Semantics
-
-    g, _ = build(config, batch_path)
-    stated = set(g)
-    ontology = Graph().parse(ONTOLOGY_PATH, format="turtle")
-    closed = Graph()
-    for triple in g:
-        closed.add(triple)
-    for triple in ontology:
-        closed.add(triple)
-    DeductiveClosure(OWLRL_Semantics).expand(closed)
-
-    def about_the_shop(s, p, o):
-        vocabulary = str(p).startswith(str(SHOP)) or (p == RDF.type and str(o).startswith((str(SHOP), str(SKOS))))
-        return vocabulary and str(s).startswith(str(SHOP)) and s not in ontology.subjects()
-
-    added = {t for t in closed if t not in stated and t not in ontology and about_the_shop(*t)}
-    restated = {t for t in stated if about_the_shop(*t)}
-    kinds = {}
-    for s, p, o in added:
-        kind = f"a {short(o)}" if p == RDF.type else short(p)
-        kinds[kind] = kinds.get(kind, 0) + 1
-    print(f"stated in the graph about the shop's resources: {len(restated)} statements")
-    print(f"added by the reasoner: {len(added)} statements")
-    for kind, n in sorted(kinds.items()):
-        print(f"  {kind:<20} {n:>5}")
-    print("A reasoner adds statements. It does not report an error: a product with no name is not a contradiction.")
-    return 0
-
-
-def validate(config, batch_path=None):
-    """Check every resource against the shapes. Returns 0 when the graph conforms, 1 when it does not."""
-    from pyshacl import validate as shacl_validate
-    from rdflib.namespace import SH
-
-    g, _ = build(config, batch_path)
-    shapes = Graph().parse(SHAPES_PATH, format="turtle")
-    conforms, report, _ = shacl_validate(g, shacl_graph=shapes, inference="none")
-    results = []
-    for result in report.subjects(RDF.type, SH.ValidationResult):
-        focus = report.value(result, SH.focusNode)
-        key = g.value(focus, SHOP.productId)
-        path = report.value(result, SH.resultPath)
-        message = report.value(result, SH.resultMessage)
-        results.append((str(key) if key is not None else short(focus), short(path) if path else "", str(message)))
-    what = f"kg/ with {batch_path}" if batch_path else "kg/"
-    print(f"{what}: {len(g)} triples checked against {SHAPES_PATH}")
-    print(f"conforms: {'yes' if conforms else 'no'}; {len(results)} violations")
-    for key, path, message in sorted(results):
-        print(f"  {key:<32} {path:<12} {message}")
-    return 0 if conforms else 1
-
-
 def main(argv=None):
     parser = argparse.ArgumentParser(description="The shop's knowledge layer as an RDF graph.")
-    parser.add_argument("command", choices=["load", "count", "ask", "check", "try", "infer", "validate"])
-    parser.add_argument("--batch", help="a supplier's batch, added to the knowledge in memory")
+    parser.add_argument("command", choices=["load", "count", "ask", "check"])
     args = parser.parse_args(argv)
     setup_logging(os.environ.get("LOG_LEVEL", "WARNING"))
     config = load_config()
@@ -439,15 +336,6 @@ def main(argv=None):
         return 0
     if args.command == "check":
         return check(config)
-    if args.command == "try":
-        if not args.batch:
-            print("shop-kg try needs a batch: shop-kg try --batch incoming/harbour-cookware.csv", file=sys.stderr)
-            return 2
-        return try_batch(config, args.batch)
-    if args.command == "infer":
-        return infer(config, args.batch)
-    if args.command == "validate":
-        return validate(config, args.batch)
     if not STORE_PATH.exists():
         print(f"No graph store yet at {STORE_PATH}: run make kg-load first.", file=sys.stderr)
         return 1

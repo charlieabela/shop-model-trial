@@ -71,6 +71,17 @@ shop:MaterialShape a sh:NodeShape ;
         sh:message "A material has at most one broader material." ;
     ] .
 
+# Your turn (Section 5.4): the shape for a range. If you follow the notes you write it yourself; it is here because
+# the zip holds the end state of the stage.
+shop:RangeShape a sh:NodeShape ;
+    sh:targetClass shop:Range ;
+    sh:property [
+        sh:path rdfs:label ;
+        sh:minCount 1 ; sh:maxCount 1 ;
+        sh:minLength 1 ;
+        sh:message "A range has exactly one name." ;
+    ] .
+
 shop:ListingShape a sh:NodeShape ;
     sh:targetClass shop:Listing ;
     sh:property [

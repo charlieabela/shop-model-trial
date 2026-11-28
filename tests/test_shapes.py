@@ -5,8 +5,9 @@ import pytest
 from rdflib import OWL, RDF, Graph
 
 from shop_model.config import load_config
-from shop_model.graph import ONTOLOGY_PATH, SHAPES_PATH, SHOP, build, validate
-from shop_model.knowledge import check_against_schema, load_batch, load_schema
+from shop_model.graph import SHOP
+from shop_model.intake import ONTOLOGY_PATH, SHAPES_PATH, build, load_batch, validate
+from shop_model.knowledge import check_against_schema, load_schema
 
 BATCH = Path("incoming/harbour-cookware.csv")
 PROPERTY_OF = {"IN_CATEGORY": "inCategory", "IN_RANGE": "inRange", "MADE_OF": "madeOf", "CONTAINS": "contains",
@@ -35,7 +36,7 @@ def test_the_shapes_are_valid_turtle_and_target_the_shop_classes():
     from rdflib.namespace import SH
     shapes = Graph().parse(SHAPES_PATH, format="turtle")
     targets = {str(c).removeprefix(str(SHOP)) for c in shapes.objects(None, SH.targetClass)}
-    assert targets == {"Product", "GiftSet", "Category", "Material", "Listing"}
+    assert targets == {"Product", "GiftSet", "Category", "Material", "Range", "Listing"}
 
 
 def test_the_released_knowledge_conforms_to_the_shapes(config):

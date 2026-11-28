@@ -38,13 +38,13 @@ pluggy==1.7.0
 prettytable==3.18.0
 prometheus-client==0.26.0
 protobuf==7.36.2
-psycopg-binary==3.3.6
 psycopg==3.3.6
-pyasn1-modules==0.4.2
+psycopg-binary==3.3.6
 pyasn1==0.6.5
+pyasn1-modules==0.4.2
 pycparser==3.12
-pydantic-core==2.50.1
 pydantic==2.14.1
+pydantic-core==2.50.1
 pygments==2.21.0
 pyparsing==3.3.3
 pyshacl==0.40.2

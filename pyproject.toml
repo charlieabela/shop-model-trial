@@ -38,6 +38,7 @@ shop-gate = "shop_model.evaluate:main"
 shop-registry = "shop_model.registry:main"
 shop-ask = "shop_model.ask:main"
 shop-kg = "shop_model.graph:main"
+shop-intake = "shop_model.intake:main"
 
 
 
