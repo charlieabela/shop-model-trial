@@ -231,3 +231,22 @@ make kg-validate BATCH=incoming/harbour-cookware.csv   # the batch checked again
   listing must have.
 
 The knowledge is still release 1.0: the batch has not been accepted.
+
+## Accepting a batch and publishing a release (Session 8, Stage 19)
+
+The knowledge is release 1.1: release 1.0 with seven products accepted from Harbour Cookware. Three files decide
+what is accepted, and each changes only through a pull request: `kg/supplier_map.csv`,
+`incoming/harbour-cookware.corrections.csv` and `kg/shapes.ttl`.
+
+```bash
+make kg-plan BATCH=incoming/harbour-cookware.csv      # what would be accepted, row by row
+make kg-accept BATCH=incoming/harbour-cookware.csv    # write it to kg/; safe to run again
+make kg-load && make kg-source                        # where each product came from
+make kg-propose BATCH=incoming/harbour-cookware.csv   # a language model's proposals; needs Ollama
+make kg-publish                                       # load the release into GraphDB; needs GraphDB
+```
+
+A release is made by GitHub Actions: when a pull request that raises the version in `kg/schema.yaml` is merged
+into `main`, the run that checked the store tags it and attaches it to a release.
+
+To go back to release 1.0: `git restore --source kg-v1.0 -- kg/`, then `make kg-check`.

@@ -43,6 +43,41 @@ shop:ProductShape a sh:NodeShape ;
         sh:maxCount 1 ;
         sh:class shop:Material ;
         sh:message "A product is made of at most one material." ;
+    ] ;
+    # Session 8, Stage 19: a product that came from a supplier says which one, in which batch, under which key.
+    sh:property [
+        sh:path shop:suppliedBy ;
+        sh:class shop:Supplier ;
+        sh:message "A product is supplied by a supplier the shop knows." ;
+    ] ;
+    sh:property [
+        sh:path shop:inBatch ;
+        sh:class shop:Batch ;
+        sh:message "A product comes in a batch the shop has recorded." ;
+    ] .
+
+shop:SupplierShape a sh:NodeShape ;
+    sh:targetClass shop:Supplier ;
+    sh:property [
+        sh:path rdfs:label ;
+        sh:minCount 1 ; sh:maxCount 1 ;
+        sh:minLength 1 ;
+        sh:message "A supplier has exactly one name." ;
+    ] .
+
+shop:BatchShape a sh:NodeShape ;
+    sh:targetClass shop:Batch ;
+    sh:property [
+        sh:path shop:receivedFrom ;
+        sh:minCount 1 ; sh:maxCount 1 ;
+        sh:class shop:Supplier ;
+        sh:message "A batch is received from exactly one supplier." ;
+    ] ;
+    sh:property [
+        sh:path shop:received ;
+        sh:minCount 1 ; sh:maxCount 1 ;
+        sh:datatype xsd:date ;
+        sh:message "A batch has one date on which it was received." ;
     ] .
 
 shop:GiftSetShape a sh:NodeShape ;

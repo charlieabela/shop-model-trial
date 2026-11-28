@@ -149,6 +149,9 @@ def add_knowledge(g, kg, listings, version=None):
         g.add((node, SHOP.listedAt, Literal(row["listed_at"], datatype=XSD.date)))
         g.add((node, SHOP.price, Literal(Decimal(f"{row['price']:.2f}"), datatype=XSD.decimal)))
         g.add((node, SHOP.sold, Literal(bool(row["sold"]), datatype=XSD.boolean)))
+    # Session 8, Stage 19: where each product came from. Imported here because supply.py imports this module.
+    from shop_model.supply import add_sources
+    add_sources(g, kg)
     return g
 
 

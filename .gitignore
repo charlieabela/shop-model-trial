@@ -8,3 +8,6 @@ __pycache__/
 .ruff_cache/
 .hypothesis/
 kg/build/
+# Session 8, Stage 19: a licence is never committed, and a model's proposals are a working file.
+graphdb.license
+incoming/*.proposed.csv

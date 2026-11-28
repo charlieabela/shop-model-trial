@@ -6,7 +6,7 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write                  # Session 8, Stage 19: lets the run create the tag and the release of the knowledge
   packages: write                  # lets the run's own token push to ghcr.io (used on main only)
 
 jobs:
@@ -32,3 +32,24 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: make publish IMAGE="$IMAGE"
+
+      # Session 8, Stage 19. Only on main, and only if every step above passed: if kg/schema.yaml states a version
+      # that has no tag yet, release the knowledge. The tag records the fingerprint of the store that make ci
+      # has just checked, and that store is attached to the release.
+      - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        name: Release the knowledge if its version is new
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(make -s kg-version)
+          if git ls-remote --exit-code --tags origin "refs/tags/kg-v$VERSION" > /dev/null; then
+            echo "Shop knowledge $VERSION is already released."
+          else
+            SHA=$(sha256sum kg/build/shop.nt | cut -c1-16)
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "kg-v$VERSION" -m "Shop knowledge $VERSION; store sha256 $SHA"
+            git push origin "kg-v$VERSION"
+            gh release create "kg-v$VERSION" kg/build/shop.nt --title "Shop knowledge $VERSION" \
+              --notes "Store sha256 $SHA. Released by the run that checked it."
+          fi
