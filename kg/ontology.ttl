@@ -16,7 +16,7 @@
 
 shop:ontology a owl:Ontology ;
     rdfs:label "The shop's ontology"@en ;
-    owl:versionInfo "1.0" .
+    owl:versionInfo "1.1" .
 
 # Classes
 
@@ -56,6 +56,15 @@ shop:Listing a owl:Class ;
 shop:KnowledgeRelease a owl:Class ;
     rdfs:label "Knowledge release"@en ;
     rdfs:comment "A released version of the shop's knowledge."@en .
+
+# Session 8, Stage 19: where a product came from.
+shop:Supplier a owl:Class ;
+    rdfs:label "Supplier"@en ;
+    rdfs:comment "A company the shop buys products from."@en .
+
+shop:Batch a owl:Class ;
+    rdfs:label "Batch"@en ;
+    rdfs:comment "One file of products received from one supplier on one day."@en .
 
 # Properties that connect two resources. The domain is the class of the subject, the range that of the object.
 
@@ -116,3 +125,30 @@ shop:sold a owl:DatatypeProperty ;
     rdfs:domain shop:Listing ;
     rdfs:range xsd:boolean ;
     rdfs:label "sold"@en .
+
+# Session 8, Stage 19: where a product came from.
+
+shop:suppliedBy a owl:ObjectProperty ;
+    rdfs:domain shop:Product ;
+    rdfs:range shop:Supplier ;
+    rdfs:label "supplied by"@en .
+
+shop:inBatch a owl:ObjectProperty ;
+    rdfs:domain shop:Product ;
+    rdfs:range shop:Batch ;
+    rdfs:label "in batch"@en .
+
+shop:receivedFrom a owl:ObjectProperty ;
+    rdfs:domain shop:Batch ;
+    rdfs:range shop:Supplier ;
+    rdfs:label "received from"@en .
+
+shop:received a owl:DatatypeProperty ;
+    rdfs:domain shop:Batch ;
+    rdfs:range xsd:date ;
+    rdfs:label "received"@en .
+
+shop:supplierKey a owl:DatatypeProperty ;
+    rdfs:domain shop:Product ;
+    rdfs:range xsd:string ;
+    rdfs:label "supplier key"@en .

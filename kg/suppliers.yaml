@@ -1,0 +1,8 @@
+# The shop's suppliers and the batches received from them (Session 8, Stage 19).
+# Fictitious, written for this unit. Owner: the shop's owner, who reviews every change.
+suppliers:
+  - {id: harbour-cookware, name: Harbour Cookware}
+
+# A batch is one file from one supplier, received on one day. The file stays in incoming/, as it was received.
+batches:
+  - {id: harbour-cookware-2026-12, supplier: harbour-cookware, file: incoming/harbour-cookware.csv, received: "2026-12-01"}

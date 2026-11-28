@@ -73,6 +73,7 @@ questions:
       - water-bottle-750
 
   # The catalogue holds products the listings do not: they have never been listed (Christmas 2026 catalogue).
+  # Release 1.1 adds the seven products accepted from Harbour Cookware (Session 8, Stage 19).
   - id: catalogue
     question: Which kitchen and dining products in the catalogue have never been listed?
     terms: [kitchen]
@@ -80,11 +81,18 @@ questions:
     expected:
       - bamboo-serving-tray
       - cast-iron-skillet
+      - copper-jam-pan
+      - copper-saute-pan-24
+      - copper-serving-tray
+      - copper-stock-pot
       - enamel-baking-tray
       - glass-tumbler-set
       - linen-table-runner
       - olive-wood-spoon-set
       - rattan-placemats
+      - stainless-roasting-tin
+      - stainless-saucepan-18
+      - stainless-saute-pan-26
       - stoneware-side-plate
       - walnut-cheese-board
 

@@ -1,0 +1,9 @@
+supplier,supplier_key,action,product_id,note
+harbour-cookware,copper-saute-pan-24,add,copper-saute-pan-24,
+harbour-cookware,stainless-saute-pan-26,add,stainless-saute-pan-26,
+harbour-cookware,copper-stock-pot,add,copper-stock-pot,
+harbour-cookware,stainless-roasting-tin,add,stainless-roasting-tin,
+harbour-cookware,copper-jam-pan,add,copper-jam-pan,
+harbour-cookware,HC_0518,add,stainless-saucepan-18,the supplier's code is not a key in the shop's form
+harbour-cookware,enamelled-cast-iron-casserole,same,cast-iron-casserole,the shop already sells this casserole
+harbour-cookware,copper-serving-tray,add,copper-serving-tray,

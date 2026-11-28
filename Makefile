@@ -13,7 +13,8 @@ LABELS := $(if $(SOURCE),--label org.opencontainers.image.source=$(SOURCE))
 GATE_SPLIT ?= holdout
 
 .PHONY: install lint test validate gate build publish up version ci train register champion ask profile sales kg-version kg-release \
-	kg-load kg-count kg-ask kg-clean kg-check kg-try kg-infer kg-validate
+	kg-load kg-count kg-ask kg-clean kg-check kg-try kg-infer kg-validate \
+	kg-plan kg-accept kg-source kg-propose kg-publish
 
 install:
 	python3 -m pip install -r requirements.txt
@@ -119,6 +120,28 @@ kg-infer:
 # Every resource checked against kg/shapes.ttl. make ci runs it on kg/, with no batch.
 kg-validate:
 	shop-intake validate $(if $(BATCH),--batch $(BATCH))
+
+# Session 8, Stage 19: accepting a batch, and publishing a release.
+# What would be accepted from a batch, row by row: make kg-plan BATCH=incoming/harbour-cookware.csv
+kg-plan:
+	shop-supply plan --batch $(BATCH)
+
+# Write the accepted products to kg/. Safe to run again: a product already in kg/ is not added twice.
+kg-accept:
+	shop-supply accept --batch $(BATCH)
+
+# Where each product came from, read from the store: make kg-source, or make kg-source PRODUCT=copper-stock-pot
+PRODUCT ?=
+kg-source:
+	shop-supply source $(if $(PRODUCT),--product $(PRODUCT))
+
+# Ask the language model to propose the fields of each row of a batch. Needs the model; make ci never runs it.
+kg-propose:
+	shop-supply propose --batch $(BATCH)
+
+# Load the checked store into GraphDB, in a named graph for the release. Needs GraphDB; make ci never runs it.
+kg-publish: kg-check
+	shop-supply publish
 
 version:
 	@echo $(VERSION)

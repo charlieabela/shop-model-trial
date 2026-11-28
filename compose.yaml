@@ -32,7 +32,20 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      mlflow:
+      # Session 8, Stage 19: GraphDB Free, where make kg-publish loads each release of the knowledge.
+  # Every edition needs a licence file. Keep yours outside the repository and give its path in .env
+  # (GRAPHDB_LICENSE). The Workbench is at http://localhost:7200.
+  graphdb:
+    image: ontotext/graphdb:11.3.1
+    environment:
+      GDB_HEAP_SIZE: 1g
+    ports:
+      - "7200:7200"
+    volumes:
+      - graphdb-data:/opt/graphdb/home
+      - ${GRAPHDB_LICENSE:-./graphdb.license}:/opt/graphdb/home/conf/graphdb.license:ro
+
+  mlflow:
         condition: service_started
 
   # Session 6: the tracking server and model registry, on port 5000.
@@ -57,3 +70,4 @@ services:
 volumes:
   db-data:
   mlflow-artifacts:
+  graphdb-data:
