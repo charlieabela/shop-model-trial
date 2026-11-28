@@ -1,0 +1,100 @@
+# The shop's shapes (Session 8, Stage 18): what every resource of a class must have, written in SHACL.
+# Fictitious, written for this unit. Owner: the shop's owner, who reviews every change.
+#
+# A shape is a condition on the data. make kg-validate checks every resource of a class against its shape and
+# reports each one that does not conform, as the pandera schema of Session 5 does for the rows of a CSV file.
+# The cardinalities are those of kg/schema.yaml; the conditions on values (a name that is not empty, the form
+# of a key, a price above zero) are new, because kg/schema.yaml has no place for them.
+
+@prefix shop: <https://ari3217.example.org/shop/> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+shop:ProductShape a sh:NodeShape ;
+    sh:targetClass shop:Product ;
+    sh:property [
+        sh:path shop:productId ;
+        sh:minCount 1 ; sh:maxCount 1 ;
+        sh:pattern "^[a-z0-9]+(-[a-z0-9]+)*$" ;
+        sh:message "A product has one key, in lower case, with words joined by hyphens." ;
+    ] ;
+    sh:property [
+        sh:path rdfs:label ;
+        sh:minCount 1 ;
+        sh:minLength 1 ;
+        sh:message "A product has a name that is not empty." ;
+    ] ;
+    sh:property [
+        sh:path shop:inRange ;
+        sh:minCount 1 ; sh:maxCount 1 ;
+        sh:class shop:Range ;
+        sh:message "A product is in exactly one range." ;
+    ] ;
+    sh:property [
+        sh:path shop:inCategory ;
+        sh:minCount 1 ;
+        sh:class shop:Category ;
+        sh:message "A product is in at least one category." ;
+    ] ;
+    sh:property [
+        sh:path shop:madeOf ;
+        sh:maxCount 1 ;
+        sh:class shop:Material ;
+        sh:message "A product is made of at most one material." ;
+    ] .
+
+shop:GiftSetShape a sh:NodeShape ;
+    sh:targetClass shop:GiftSet ;
+    sh:property [
+        sh:path shop:contains ;
+        sh:minCount 2 ;
+        sh:class shop:Product ;
+        sh:message "A gift set contains at least two products." ;
+    ] .
+
+shop:CategoryShape a sh:NodeShape ;
+    sh:targetClass shop:Category ;
+    sh:property [
+        sh:path skos:broader ;
+        sh:minCount 1 ; sh:maxCount 1 ;
+        sh:message "A category has exactly one broader concept." ;
+    ] .
+
+shop:MaterialShape a sh:NodeShape ;
+    sh:targetClass shop:Material ;
+    sh:property [
+        sh:path skos:broader ;
+        sh:maxCount 1 ;
+        sh:class shop:Material ;
+        sh:message "A material has at most one broader material." ;
+    ] .
+
+shop:ListingShape a sh:NodeShape ;
+    sh:targetClass shop:Listing ;
+    sh:property [
+        sh:path shop:of ;
+        sh:minCount 1 ; sh:maxCount 1 ;
+        sh:class shop:Product ;
+        sh:message "A listing is of exactly one product." ;
+    ] ;
+    sh:property [
+        sh:path shop:listedAt ;
+        sh:minCount 1 ; sh:maxCount 1 ;
+        sh:datatype xsd:date ;
+        sh:message "A listing has one date." ;
+    ] ;
+    sh:property [
+        sh:path shop:price ;
+        sh:minCount 1 ; sh:maxCount 1 ;
+        sh:datatype xsd:decimal ;
+        sh:minExclusive 0 ;
+        sh:message "A listing has one price, above zero." ;
+    ] ;
+    sh:property [
+        sh:path shop:sold ;
+        sh:minCount 1 ; sh:maxCount 1 ;
+        sh:datatype xsd:boolean ;
+        sh:message "A listing says once whether it was sold." ;
+    ] .

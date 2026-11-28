@@ -104,8 +104,24 @@ kg-clean:
 kg-check:
 	shop-kg check
 
+# Session 8, Stage 18: the ontology, the shapes and a supplier's batch. None of these targets changes kg/ or the
+# store. With BATCH=incoming/harbour-cookware.csv each one works on the knowledge with that batch added in memory.
+BATCH ?=
+
+# What Stage 17 can say about a batch: make kg-try BATCH=incoming/harbour-cookware.csv
+kg-try:
+	shop-kg try --batch $(BATCH)
+
+# What a reasoner adds, given kg/ontology.ttl.
+kg-infer:
+	shop-kg infer $(if $(BATCH),--batch $(BATCH))
+
+# Every resource checked against kg/shapes.ttl. make ci runs it on kg/, with no batch.
+kg-validate:
+	shop-kg validate $(if $(BATCH),--batch $(BATCH))
+
 version:
 	@echo $(VERSION)
 
 # The whole pipeline, in order. make stops at the first command that exits non-zero.
-ci: lint test validate gate kg-check build
+ci: lint test validate gate kg-check kg-validate build

@@ -1,0 +1,118 @@
+# The shop's ontology (Session 8, Stage 18): the schema of kg/schema.yaml written in RDFS and OWL.
+# Fictitious, written for this unit. Owner: the shop's owner, who reviews every change.
+#
+# An ontology says what the words mean: which classes exist, which class is a kind of another, and what
+# each property connects. A reasoner uses it to add statements that follow from what is already stated.
+# It does not reject data: kg/shapes.ttl does that.
+#
+# The ontology is kept beside the store, not inside it: kg/build/shop.nt and its SHA-256 do not change.
+
+@prefix shop: <https://ari3217.example.org/shop/> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+shop:ontology a owl:Ontology ;
+    rdfs:label "The shop's ontology"@en ;
+    owl:versionInfo "1.0" .
+
+# Classes
+
+shop:Department a owl:Class ;
+    rdfs:subClassOf skos:Concept ;
+    rdfs:label "Department"@en ;
+    rdfs:comment "The top level of the taxonomy."@en .
+
+shop:Category a owl:Class ;
+    rdfs:subClassOf skos:Concept ;
+    rdfs:label "Category"@en ;
+    rdfs:comment "A category or subcategory, a kind of its broader concept."@en .
+
+shop:Material a owl:Class ;
+    rdfs:subClassOf skos:Concept ;
+    rdfs:label "Material"@en ;
+    rdfs:comment "What a product is made of, a kind of its broader material."@en .
+
+shop:Range a owl:Class ;
+    rdfs:label "Range"@en ;
+    rdfs:comment "A range the shop sells, core or premium."@en .
+
+shop:Product a owl:Class ;
+    rdfs:label "Product"@en ;
+    rdfs:comment "A thing the shop sells, listed or not yet listed."@en .
+
+# A gift set is a kind of product: whatever is true of every product is true of every gift set.
+shop:GiftSet a owl:Class ;
+    rdfs:subClassOf shop:Product ;
+    rdfs:label "Gift set"@en ;
+    rdfs:comment "A product made of other products."@en .
+
+shop:Listing a owl:Class ;
+    rdfs:label "Listing"@en ;
+    rdfs:comment "One product on sale on one day at one price."@en .
+
+shop:KnowledgeRelease a owl:Class ;
+    rdfs:label "Knowledge release"@en ;
+    rdfs:comment "A released version of the shop's knowledge."@en .
+
+# Properties that connect two resources. The domain is the class of the subject, the range that of the object.
+
+shop:inCategory a owl:ObjectProperty ;
+    rdfs:domain shop:Product ;
+    rdfs:range shop:Category ;
+    rdfs:label "in category"@en .
+
+shop:inRange a owl:ObjectProperty ;
+    rdfs:domain shop:Product ;
+    rdfs:range shop:Range ;
+    rdfs:label "in range"@en .
+
+shop:madeOf a owl:ObjectProperty ;
+    rdfs:domain shop:Product ;
+    rdfs:range shop:Material ;
+    rdfs:label "made of"@en .
+
+shop:contains a owl:ObjectProperty ;
+    rdfs:domain shop:GiftSet ;
+    rdfs:range shop:Product ;
+    rdfs:label "contains"@en .
+
+# Complements are meant both ways: if candle holders go with candles, candles go with candle holders.
+shop:goesWith a owl:ObjectProperty , owl:SymmetricProperty ;
+    rdfs:domain shop:Category ;
+    rdfs:range shop:Category ;
+    rdfs:label "goes with"@en .
+
+shop:of a owl:ObjectProperty ;
+    rdfs:domain shop:Listing ;
+    rdfs:range shop:Product ;
+    rdfs:label "of"@en .
+
+# Properties whose value is a literal.
+
+shop:productId a owl:DatatypeProperty ;
+    rdfs:domain shop:Product ;
+    rdfs:range xsd:string ;
+    rdfs:label "product identifier"@en .
+
+shop:launched a owl:DatatypeProperty ;
+    rdfs:domain shop:Range ;
+    rdfs:range xsd:date ;
+    rdfs:label "launched"@en .
+
+shop:listedAt a owl:DatatypeProperty ;
+    rdfs:domain shop:Listing ;
+    rdfs:range xsd:date ;
+    rdfs:label "listed at"@en .
+
+shop:price a owl:DatatypeProperty ;
+    rdfs:domain shop:Listing ;
+    rdfs:range xsd:decimal ;
+    rdfs:label "price"@en .
+
+shop:sold a owl:DatatypeProperty ;
+    rdfs:domain shop:Listing ;
+    rdfs:range xsd:boolean ;
+    rdfs:label "sold"@en .

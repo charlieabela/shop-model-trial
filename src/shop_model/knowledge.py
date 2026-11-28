@@ -14,7 +14,7 @@ The files of Shop knowledge v1.0 hold what the listings alone cannot say:
 Stage 17 loads the same files into Neo4j; this module answers from them directly.
 """
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import pandas as pd
 import yaml
@@ -108,6 +108,19 @@ def load_knowledge():
     return Knowledge(products=load_products(), product_categories=load_product_categories(),
                      gift_sets=load_gift_sets(), concepts=concepts, ranges=ranges, materials=load_materials(),
                      complements=load_complements(), synonyms=load_synonyms())
+
+
+def load_batch(path):
+    """A supplier's batch: one row per product, in the columns of kg/products.csv, with the product's category
+    and the supplier's description."""
+    return pd.read_csv(path, dtype=str, keep_default_na=False)
+
+
+def with_batch(kg, batch):
+    """The knowledge with a batch added to it, in memory. The files in kg/ are not changed."""
+    products = pd.concat([kg.products, batch[list(kg.products.columns)]], ignore_index=True)
+    categories = pd.concat([kg.product_categories, batch[["product_id", "category"]]], ignore_index=True)
+    return replace(kg, products=products, product_categories=categories)
 
 
 def narrower(hierarchy, broad_id):

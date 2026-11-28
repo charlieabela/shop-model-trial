@@ -212,3 +212,22 @@ so a rollback can be confirmed: check out the files of an earlier release, run `
 git checkout kg-v1.0 -- kg/   # the knowledge files of release 1.0, on your current branch
 make kg-check                 # the SHA-256 printed must match the one in the tag's message
 ```
+
+## The ontology and the shapes (Session 8, Stage 18)
+
+A supplier, Harbour Cookware, has sent a batch of products: `incoming/harbour-cookware.csv`. Fictitious, written
+for this unit. The three commands below work on the knowledge with the batch added in memory. None of them
+changes `kg/` or the store.
+
+```bash
+make kg-try BATCH=incoming/harbour-cookware.csv        # what Stage 17 can say about the batch
+make kg-infer                                          # what a reasoner adds, given kg/ontology.ttl
+make kg-validate                                       # kg/ checked against kg/shapes.ttl; part of make ci
+make kg-validate BATCH=incoming/harbour-cookware.csv   # the batch checked against the shapes
+```
+
+- `kg/ontology.ttl` is the schema of `kg/schema.yaml` written in RDFS and OWL. It says what the words mean.
+- `kg/shapes.ttl` holds the SHACL shapes. They say what every product, gift set, category, material and
+  listing must have.
+
+The knowledge is still release 1.0: the batch has not been accepted.
