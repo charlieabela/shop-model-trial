@@ -100,8 +100,9 @@ def test_propose_reads_the_reply_of_an_openai_compatible_endpoint(config, tmp_pa
 
 
 def test_publish_fails_when_graphdb_holds_a_different_number_of_triples(config):
-    if not Path("kg/build/shop.nt").exists():
-        pytest.skip("no store built yet")
+    if not Path("kg/build/shop.nt").exists():   # a fresh copy has no store yet: build it, as make kg-check does
+        from shop_model.graph import check
+        check(config)
     server = serve({"results": {"bindings": [{"n": {"value": "1"}}]}})
     gdb = {"url": f"http://127.0.0.1:{server.server_port}", "repository": "shop"}
     assert publish({**config, "graphdb": gdb}) == 1
